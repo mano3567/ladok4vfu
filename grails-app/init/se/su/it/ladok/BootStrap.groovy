@@ -16,14 +16,17 @@ class BootStrap {
         if(ConfigValue.countByName("ladok3.feedURL")<1) {
             configurationService.setLadokFeed3Url("https://api.ladok.se/handelser/feed/")
         }
-//        ladokService.updateLadok3BevisBenamning(Edu.SU)
-//        ladokService.updateLadok3Finansieringsform(Edu.SU)
-//        ladokService.updateLadok3Organizations(Edu.SU)
-//        ladokService.updateLadok3Periods(Edu.SU)
-//        ladokService.updateLadok3StudieLokalisering(Edu.SU)
-//        ladokService.updateLadok3StudieTakt(Edu.SU)
-//        ladokService.updateLadok3UndervisningsForm(Edu.SU)
-//        ladokService.updateLadok3UndervisningsTid(Edu.SU)
+        Edu.values().each {Edu edu ->
+//            ladokService.updateLadok3BevisBenamning(edu)
+//            ladokService.updateLadok3Finansieringsform(edu)
+//            ladokService.updateLadok3Organizations(edu)
+//            ladokService.updateLadok3Periods(edu)
+//            ladokService.updateLadok3StudieLokalisering(edu)
+//            ladokService.updateLadok3StudieTakt(edu)
+//            ladokService.updateLadok3UndervisningsForm(edu)
+//            ladokService.updateLadok3UndervisningsTid(edu)
+            ladokService.updateLadok3UtbildningsTyp(edu)
+        }
     }
 
     def destroy = {

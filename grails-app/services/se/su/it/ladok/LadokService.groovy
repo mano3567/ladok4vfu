@@ -412,4 +412,69 @@ class LadokService {
             }
         }
     }
+
+    @Transactional
+    void updateLadok3UtbildningsTyp(Edu edu) {
+        if(edu) {
+            int count = 0
+            Map response = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/grunddata/utbildningstyp", "application/vnd.ladok-utbildningsinformation+json")
+            log.info("Processing (${response?.Utbildningstyp?response.Utbildningstyp.size():0}) updateLadok3Utbildningstyp for edu: ${edu}")
+            if (response && response.Utbildningstyp) {
+                response.Utbildningstyp.each { Map utbildningstyp ->
+                    if((!utbildningstyp?.ID || utbildningstyp.ID.isEmpty())) {
+                        throw new Exception("Missing <utbildningstyp.ID")
+                    }
+                    if(utbildningstyp?.ID) {
+                        int ladokId = utbildningstyp.ID as int
+                        L3UtbildningsTyp l3UtbildningsTyp = L3UtbildningsTyp.findOrCreateByEduAndLadokId(edu, ladokId)
+                        l3UtbildningsTyp.avserTillfalle = utbildningstyp.AvserTillfalle ?: false
+                        l3UtbildningsTyp.benamningEn = utbildningstyp.Benamning?.en?.trim() as String
+                        l3UtbildningsTyp.benamningSv = utbildningstyp.Benamning?.sv?.trim() as String
+                        l3UtbildningsTyp.beskrivningEn = utbildningstyp.Beskrivning?.en?.trim() as String
+                        l3UtbildningsTyp.beskrivningSv = utbildningstyp.Beskrivning?.sv?.trim() as String
+                        l3UtbildningsTyp.edu = edu
+                        l3UtbildningsTyp.forvaldOmfattning = utbildningstyp.Regler?.ForvaldOmfattning ?:0
+                        l3UtbildningsTyp.grundTyp = utbildningstyp.Grundtyp?.trim() as String
+                        l3UtbildningsTyp.harOmfattning = utbildningstyp.Regler?.HarOmfattning ?:false
+                        l3UtbildningsTyp.individuell = utbildningstyp.Regler?.Individuell ?:false
+                        l3UtbildningsTyp.kanUtannonseras = utbildningstyp.Regler?.KanUtannonseras ?:false
+                        l3UtbildningsTyp.kod = utbildningstyp.Kod?.trim() as String
+                        l3UtbildningsTyp.ladokId = ladokId
+                        l3UtbildningsTyp.nivaInomStudieordningId = utbildningstyp.NivaInomStudieordningID?:0
+                        l3UtbildningsTyp.sjalvstandig = utbildningstyp.Regler?.Sjalvstandig ?:false
+                        l3UtbildningsTyp.sorteringsOrdning = utbildningstyp.Sorteringsordning?:0
+                        l3UtbildningsTyp.studieOrdningId = utbildningstyp.StudieordningID?:0
+                        l3UtbildningsTyp.tillatnaUtbildningstyperIStruktur = utbildningstyp.TillatnaUtbildningstyperIStruktur?utbildningstyp.TillatnaUtbildningstyperIStruktur.join(","):null
+                        l3UtbildningsTyp.tillfalleInomUtbildningstyper = utbildningstyp.TillfalleInomUtbildningstyper?utbildningstyp.TillfalleInomUtbildningstyper.join(","):null
+                        l3UtbildningsTyp.versionsHanteras = utbildningstyp.Regler?.Versionshanteras ?:false
+                        SimpleDateFormat simpleDateFormat = new SimpleDateFormat('yyyy-MM-dd')
+                        String dateString = utbildningstyp.Giltighetsperiod?.Slutdatum?.trim() as String
+                        l3UtbildningsTyp.slutDatum = null
+                        if(dateString) {
+                            try {
+                                l3UtbildningsTyp.slutDatum = simpleDateFormat.parse(dateString)
+                            } catch(Throwable exception) {
+                                l3UtbildningsTyp.slutDatum = null
+                            }
+                        }
+                        dateString = utbildningstyp.Giltighetsperiod?.Startdatum?.trim() as String
+                        l3UtbildningsTyp.startDatum = null
+                        if(dateString) {
+                            try {
+                                l3UtbildningsTyp.startDatum = simpleDateFormat.parse(dateString)
+                            } catch(Throwable exception) {
+                                l3UtbildningsTyp.startDatum = null
+                            }
+                        }
+
+                        l3UtbildningsTyp.save(failOnError: true)
+                        count++
+                        if((count % 100) == 0) {
+                            log.info("Number of utbildningstyper this far (${edu}): ${count}")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
