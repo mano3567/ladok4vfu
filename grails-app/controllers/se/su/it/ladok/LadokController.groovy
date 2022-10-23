@@ -21,9 +21,16 @@ class LadokController {
     }
 
     def index() {
-        [Edu.GIH, Edu.HH, Edu.KF, Edu.KMH, Edu.MAU, Edu.DOCH].each { Edu edu ->
-            ladokService.updateLadok3Finansieringsform(edu)
-        }
         [:]
+    }
+
+    def testEducationImport() {
+        L3Utbildning.getImplementedEducationTypeCodes().each {String kod ->
+            Edu.values().each { Edu edu ->
+                log.info "Trying to import ${kod} for ${edu}"
+                ladokService.testUpdateAFewUtbildningarPerTypeAndEdu(kod, edu)
+            }
+        }
+        return redirect(action: 'index')
     }
 }
