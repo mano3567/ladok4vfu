@@ -478,6 +478,88 @@ class LadokService {
         }
     }
 
+    @Transactional
+    void updateL3Education(Map education, Edu edu, String utbildningUID, L3UtbildningsTyp l3UtbildningsTyp) {
+        L3Utbildning l3Utbildning = null
+        if(L3Kurs.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+            l3Utbildning = L3Kurs.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
+        } else if(L3KursPaketering.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+            l3Utbildning = L3KursPaketering.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
+        } else if(L3Program.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+            l3Utbildning = L3Program.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
+        } else if(L3ProgramInriktning.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+            l3Utbildning = L3ProgramInriktning.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
+        } else {
+            log.info "Unhandled UtbildningsTypKod ${l3UtbildningsTyp.kod} for ${edu}"
+            println("Unhandled UtbildningsTypKod ${l3UtbildningsTyp.kod} for ${edu}")
+        }
+        if(l3Utbildning) {
+            l3Utbildning.avvecklad = education.Avvecklad ?: false
+            l3Utbildning.benamning = education.Benamning?.trim() as String
+            l3Utbildning.benamningSv = education.Benamningar?.sv?.trim() as String
+            l3Utbildning.benamningEn = education.Benamningar?.en?.trim() as String
+            l3Utbildning.edu = edu
+            l3Utbildning.giltigFranPeriodId = education.GiltigFranPeriodID ?: 0
+            if(education.Omfattningsvarde?.trim() as String) {
+                l3Utbildning.omfattningsVarde = Double.parseDouble(education.Omfattningsvarde.trim() as String)
+            } else {
+                l3Utbildning.omfattningsVarde = 0.0
+            }
+            l3Utbildning.organisationsUid = education.OrganisationUID?.trim() as String
+            l3Utbildning.senasteVersion = education.SenasteVersion ?: false
+            l3Utbildning.uid = education.Uid?.trim() as String
+            l3Utbildning.utbildningsKod = education.Utbildningskod?.trim() as String
+            l3Utbildning.utbildningsTypId = l3UtbildningsTyp.ladokId
+            l3Utbildning.utbildningsUid = utbildningUID ?: null
+            l3Utbildning.versionsNummer = education.Versionsnummer ?: 0
+            l3Utbildning.save(failOnError: true)
+        }
+    }
+
+    void updateL3EducationsByEduAndType(Edu edu, String utbildningsTypKod) {
+        if(edu && utbildningsTypKod && L3Utbildning.getImplementedEducationTypeCodes().contains(utbildningsTypKod)) {
+            L3UtbildningsTyp l3UtbildningsTyp = L3UtbildningsTyp.findByEduAndKod(edu, utbildningsTypKod)
+            if(l3UtbildningsTyp) {
+                Map query = [utbildningstypID: l3UtbildningsTyp.ladokId,
+                             page            : 1,
+                             limit           : 1,
+                             onlyCount       : true]
+                Map response = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu,"/utbildningsinformation/utbildningsinstans/filtrera", "application/vnd.ladok-utbildningsinformation+json", query)
+                if (response && response.TotaltAntalPoster && response.TotaltAntalPoster > 0) {
+                    int rowCount = response.TotaltAntalPoster as int
+                    log.info("Processing (${rowCount}) updateL3EducationsByEduAndType for edu: ${edu}")
+                    println("Processing (${rowCount}) updateL3EducationsByEduAndType for edu: ${edu}")
+
+                    for (int i = 400; i < rowCount + 401; i += 400) {
+                        try {
+                            Thread.sleep(100)
+                        } catch(Throwable exception) {
+                        }
+                        query = [utbildningstypID: l3UtbildningsTyp.ladokId, page: i / 400, limit: 400]
+                        response = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/utbildningsinstans/filtrera", "application/vnd.ladok-utbildningsinformation+json", query)
+                        if (response) {
+                            response.Resultat.each { Map education ->
+                                String utbildningUID = education.UtbildningUID?.trim() as String
+                                if(!education.Utbildningskod || education.Utbildningskod.isEmpty() || !utbildningUID || utbildningUID.isEmpty()) {
+                                    log.warn("Missing <edu> or <Utbildningskod>. Will not process: ${education}")
+                                    return
+                                }
+                                try {
+                                    L3Utbildning.withTransaction {
+                                        updateL3Education(education, edu, utbildningUID,l3UtbildningsTyp)
+                                    }
+                                } catch(Throwable exception) {
+                                    log.info "Some problem updating education (${edu}, ${education.Utbildningskod}): ${exception.getMessage()}"
+                                    println("Some problem updating education (${edu}, ${education.Utbildningskod}): ${exception.getMessage()}")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void testUpdateAFewUtbildningarPerTypeAndEdu(String utbildningsTypKod, Edu edu) {
         if(edu && utbildningsTypKod && L3Utbildning.getImplementedEducationTypeCodes().contains(utbildningsTypKod)) {
             L3UtbildningsTyp l3UtbildningsTyp = L3UtbildningsTyp.findByEduAndKod(edu, utbildningsTypKod)
@@ -508,6 +590,13 @@ class LadokService {
                                 l3Utbildning.benamningSv = education.Benamningar?.sv?.trim() as String
                                 l3Utbildning.benamningEn = education.Benamningar?.en?.trim() as String
                                 l3Utbildning.edu = edu
+                                l3Utbildning.giltigFranPeriodId = education.GiltigFranPeriodID ?: 0
+                                if(education.Omfattningsvarde?.trim() as String) {
+                                    l3Utbildning.omfattningsVarde = Double.parseDouble(education.Omfattningsvarde.trim() as String)
+                                } else {
+                                    l3Utbildning.omfattningsVarde = 0.0
+                                }
+                                l3Utbildning.organisationsUid = education.OrganisationUID?.trim() as String
                                 l3Utbildning.senasteVersion = education.SenasteVersion ?: false
                                 l3Utbildning.uid = education.Uid?.trim() as String
                                 l3Utbildning.utbildningsKod = education.Utbildningskod?.trim() as String
@@ -516,7 +605,7 @@ class LadokService {
                                 l3Utbildning.versionsNummer = education.Versionsnummer ?: 0
                                 l3Utbildning.save(failOnError: true)
                             }
-0                        }
+                        }
                     }
                 } else {
                     log.info "No Educations found for ${edu} and ${utbildningsTypKod}"

@@ -21,16 +21,14 @@ class LadokController {
     }
 
     def index() {
-        [:]
-    }
-
-    def testEducationImport() {
-        L3Utbildning.getImplementedEducationTypeCodes().each {String kod ->
-            Edu.values().each { Edu edu ->
-                log.info "Trying to import ${kod} for ${edu}"
-                ladokService.testUpdateAFewUtbildningarPerTypeAndEdu(kod, edu)
-            }
+        Edu edu = params.edu?.trim() ? Edu.findByName(params.edu.trim() as String) : null
+        List<Edu> edus = Edu.values().sort {it.fullName}
+        if(params.startL3BasicsImport && edu) {
+            UpdateL3BasicsJob.triggerNow([edu: edu.name])
         }
-        return redirect(action: 'index')
+        if(params.startL3EducationsImport && edu) {
+            UpdateEducationsJob.triggerNow([edu: edu.name])
+        }
+        [edu: edu, edus: edus]
     }
 }

@@ -41,6 +41,22 @@ databaseChangeLog = {
                 constraints(nullable: "false")
             }
 
+            column(name: "giltig_fran_period_id", type: "INTEGER") {
+                constraints(nullable: "false")
+            }
+
+            column(name: "omfattnings_varde", type: "NUMERIC(7,3)") {
+                constraints(nullable: "false")
+            }
+
+            column(name: "organisations_uid", type: "VARCHAR(64)") {
+                constraints(nullable: "false")
+            }
+
+            column(name: "overliggande_utbildnings_uid", type: "VARCHAR(64)") {
+                constraints(nullable: "true")
+            }
+
             column(name: "senaste_version", type: "BIT(1)") {
                 constraints(nullable: "false")
             }
@@ -67,5 +83,6 @@ databaseChangeLog = {
         }
 
         addUniqueConstraint(columnNames: "edu, utbildnings_uid", constraintName: "UKEduUtbUidL3Utb", tableName: "l3utbildning")
+        addUniqueConstraint(columnNames: "edu, overliggande_utbildnings_uid, utbildnings_kod, versions_nummer", constraintName: "UKEduQuartetL3Utb", tableName: "l3utbildning")
     }
 }

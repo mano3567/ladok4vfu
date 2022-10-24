@@ -7,7 +7,11 @@ class L3Utbildning {
     String benamningSv
     Date dateCreated
     Edu edu
+    int giltigFranPeriodId = 0
     Date lastUpdated
+    double omfattningsVarde = 0.0
+    String organisationsUid
+    String overliggandeUtbildningsUid
     boolean senasteVersion = false
     String uid
     String utbildningsKod
@@ -22,6 +26,8 @@ class L3Utbildning {
         dateCreated(nullable: true)
         edu(nullable: false)
         lastUpdated(nullable: true)
+        organisationsUid(nullable: false, blank: false)
+        overliggandeUtbildningsUid(nullable: true)
         uid(nullable: false, blank: false)
         utbildningsKod(nullable: false, blank: false)
         utbildningsUid(nullable: false, blank: false, unique: 'edu')
