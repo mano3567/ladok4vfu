@@ -12,6 +12,7 @@ class L3Utbildning {
     double omfattningsVarde = 0.0
     String organisationsUid
     String overliggandeUtbildningsUid
+    int processStatusId = 0
     boolean senasteVersion = false
     String uid
     String utbildningsKod

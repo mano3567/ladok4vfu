@@ -45,7 +45,7 @@ databaseChangeLog = {
                 constraints(nullable: "false")
             }
 
-            column(name: "omfattnings_varde", type: "NUMERIC(7,3)") {
+            column(name: "omfattnings_varde", type: "NUMERIC(6,2)") {
                 constraints(nullable: "false")
             }
 
@@ -55,6 +55,10 @@ databaseChangeLog = {
 
             column(name: "overliggande_utbildnings_uid", type: "VARCHAR(64)") {
                 constraints(nullable: "true")
+            }
+
+            column(name: "process_status_id", type: "INTEGER") {
+                constraints(nullable: "false")
             }
 
             column(name: "senaste_version", type: "BIT(1)") {

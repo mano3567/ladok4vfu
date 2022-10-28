@@ -506,12 +506,22 @@ class LadokService {
                 l3Utbildning.omfattningsVarde = 0.0
             }
             l3Utbildning.organisationsUid = education.OrganisationUID?.trim() as String
+            l3Utbildning.overliggandeUtbildningsUid = education.OverliggandeUtbildningUID?.trim() as String
+            l3Utbildning.processStatusId = education.ProcessStatusID ?: 0
             l3Utbildning.senasteVersion = education.SenasteVersion ?: false
             l3Utbildning.uid = education.Uid?.trim() as String
             l3Utbildning.utbildningsKod = education.Utbildningskod?.trim() as String
             l3Utbildning.utbildningsTypId = l3UtbildningsTyp.ladokId
             l3Utbildning.utbildningsUid = utbildningUID ?: null
             l3Utbildning.versionsNummer = education.Versionsnummer ?: 0
+            if(!l3Utbildning.overliggandeUtbildningsUid && L3ProgramInriktning.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+                try {
+                    Thread.sleep(125L)
+                } catch(Throwable exception) {
+                }
+                Map educationAbove = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/utbildningsinstans/${l3Utbildning.uid}", "application/vnd.ladok-utbildningsinformation+json", null)
+                l3Utbildning.overliggandeUtbildningsUid = educationAbove.OverliggandeUtbildningUID?.trim() as String
+            }
             l3Utbildning.save(failOnError: true)
         }
     }

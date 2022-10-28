@@ -141,9 +141,11 @@ class HttpClientService {
                         } else if (statusCode == 404) {
                             retObject = null
                         } else if (statusCode == 429) {
+                            println("getLadok3MapFromJsonResponseByUrlAndType: Error while trying to get ${url}, httpResponse ${statusCode}.")
                             log.error("getLadok3MapFromJsonResponseByUrlAndType: Error while trying to get ${url}, httpResponse ${statusCode}.")
                             throw new Exception("429 while doing REST REQUEST: ${response.statusLine}, ${url}")
                         } else {
+                            println("getLadok3MapFromJsonResponseByUrlAndType: Error while trying to get ${url}, httpResponse ${statusCode}.")
                             log.error("getLadok3MapFromJsonResponseByUrlAndType: Error while trying to get ${url}, httpResponse ${statusCode}.")
                             throw new Exception("Failure while doing REST REQUEST: ${response.statusLine}, ${url}")
                         }
