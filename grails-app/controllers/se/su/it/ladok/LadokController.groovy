@@ -29,6 +29,10 @@ class LadokController {
         if(params.startL3EducationsImport && edu) {
             UpdateEducationsJob.triggerNow([edu: edu.name])
         }
+        if(params.testEvent) {
+            L3Utbildning education = L3KursPaketering.findByEdu(Edu.SU, [max: 1])
+            ladokService.testUpdateEducationEvent(education.uid, education.edu)
+        }
         [edu: edu, edus: edus]
     }
 }

@@ -28,5 +28,12 @@
                 <div class="col-lg-10"><g:submitButton name="startL3EducationsImport" value="Uppdatera Utbildningar" class="btn btn-primary float-right"/></div>
             </div>
         </g:form>
+        <hr class="mb-1"/>
+        <g:form name="educationEventTestForm" action="index" method="POST">
+            <div class="row mb-1">
+                <div class="col-lg-2"></div>
+                <div class="col-lg-10"><g:submitButton name="testEvent" value="Uppdatera UtbildningsTillfällen" class="btn btn-primary float-right"/></div>
+            </div>
+        </g:form>
     </body>
 </html>

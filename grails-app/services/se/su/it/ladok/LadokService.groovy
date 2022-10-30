@@ -570,58 +570,118 @@ class LadokService {
         }
     }
 
-    void testUpdateAFewUtbildningarPerTypeAndEdu(String utbildningsTypKod, Edu edu) {
-        if(edu && utbildningsTypKod && L3Utbildning.getImplementedEducationTypeCodes().contains(utbildningsTypKod)) {
-            L3UtbildningsTyp l3UtbildningsTyp = L3UtbildningsTyp.findByEduAndKod(edu, utbildningsTypKod)
-            if(l3UtbildningsTyp) {
-                Map query = [ utbildningstypID: l3UtbildningsTyp.ladokId, page: 1, limit: 400 ]
-                Map response = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/utbildningsinstans/filtrera", "application/vnd.ladok-utbildningsinformation+json", query)
-                if (response?.Resultat) {
-                    response.Resultat.each { Map education ->
-                        if(education) {
-                            String utbildningUID = education.UtbildningUID?.trim() as String
-                            if(!education.Utbildningskod || education.Utbildningskod.isEmpty() || !utbildningUID || utbildningUID.isEmpty()) {
-                                log.warn("Missing <edu> or <Utbildningskod>. Will not process: ${education}")
-                                return
-                            }
-                            L3Utbildning l3Utbildning = null
-                            if(L3Kurs.UTBILDNINGTYPER.contains(utbildningsTypKod)) {
-                                l3Utbildning = L3Kurs.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
-                            } else if(L3KursPaketering.UTBILDNINGTYPER.contains(utbildningsTypKod)) {
-                                l3Utbildning = L3KursPaketering.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
-                            } else if(L3Program.UTBILDNINGTYPER.contains(utbildningsTypKod)) {
-                                l3Utbildning = L3Program.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
-                            } else if(L3ProgramInriktning.UTBILDNINGTYPER.contains(utbildningsTypKod)) {
-                                l3Utbildning = L3ProgramInriktning.findOrCreateByEduAndUtbildningsUid(edu, utbildningUID)
-                            }
-                            if(l3Utbildning) {
-                                l3Utbildning.avvecklad = education.Avvecklad ?: false
-                                l3Utbildning.benamning = education.Benamning?.trim() as String
-                                l3Utbildning.benamningSv = education.Benamningar?.sv?.trim() as String
-                                l3Utbildning.benamningEn = education.Benamningar?.en?.trim() as String
-                                l3Utbildning.edu = edu
-                                l3Utbildning.giltigFranPeriodId = education.GiltigFranPeriodID ?: 0
-                                if(education.Omfattningsvarde?.trim() as String) {
-                                    l3Utbildning.omfattningsVarde = Double.parseDouble(education.Omfattningsvarde.trim() as String)
-                                } else {
-                                    l3Utbildning.omfattningsVarde = 0.0
-                                }
-                                l3Utbildning.organisationsUid = education.OrganisationUID?.trim() as String
-                                l3Utbildning.senasteVersion = education.SenasteVersion ?: false
-                                l3Utbildning.uid = education.Uid?.trim() as String
-                                l3Utbildning.utbildningsKod = education.Utbildningskod?.trim() as String
-                                l3Utbildning.utbildningsTypId = l3UtbildningsTyp.ladokId
-                                l3Utbildning.utbildningsUid = utbildningUID ?: null
-                                l3Utbildning.versionsNummer = education.Versionsnummer ?: 0
-                                l3Utbildning.save(failOnError: true)
-                            }
+    void testUpdateEducationEvent(String educationUid, Edu edu) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat('yyyy-MM-dd')
+        Date dateLimit = simpleDateFormat.parse('2005-01-01')
+//        Map query = [utbildningUID: educationUid, page: 1, limit: 400]
+//        Map response = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/utbildningstillfalle/filtrera", "application/vnd.ladok-utbildningsinformation+json", query)
+//            Map educationEventMap = httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/utbildningstillfalle/${uid}", "application/vnd.ladok-utbildningsinformation+json")
+
+        httpClientService.getLadok3MapFromJsonResponseByUrlAndType(edu, "/utbildningsinformation/utbildningstillfalle/lista/${educationUid}", "application/vnd.ladok-utbildningsinformation+json")?.Utbildningstillfalle?.each { Map educationEvent ->
+            if(educationEvent.AlternativaBenamningar) {
+                // do something useful?
+            }
+            if(educationEvent.Beslut) {
+                // do something useful?
+            }
+            if(educationEvent.UndervisningsformID) {
+                // do something useful?
+            }
+            if(educationEvent.Utannonserat) {
+                // do something useful?
+            }
+            if(educationEvent.UtbildningsmallUID) {
+                // do something useful?
+            }
+            String underVisningsTid = educationEvent.Attributvarden?.find {it.Namn=='utbildning.attribut.undervisningstid'}?.Varde
+            int underVisningsTidId = underVisningsTid ? Integer.parseInt(underVisningsTid) : 0
+            String finansieringsForm = educationEvent.Attributvarden?.find {it.Namn=='utbildning.attribut.finansieringsform'}?.Varde
+            int finansieringsFormId = finansieringsForm ? Integer.parseInt(finansieringsForm) : 0
+            boolean installt = educationEvent.Installt
+            String organisationUID = educationEvent.OrganisationUID?.trim() as String
+            int startPeriodId = educationEvent.StartperiodID?.value ?: 0
+            int status = educationEvent.Status ?: 0
+            int studielokaliseringID = educationEvent.StudielokaliseringID?.value ?: 0
+            int studietaktID = educationEvent.StudietaktID?.value ?: 0
+            String tillfalleskod = educationEvent.Tillfalleskod?.trim() as String
+            String uid = educationEvent.Uid?.trim() as String
+            double credits = 0.0
+            Date start = null
+            Date end = null
+            educationEvent.Tillfallesperioder.each { Map tillfallesPeriod ->
+                if(tillfallesPeriod.ForstaUndervisningsdatum) {
+                    Date forstaUndervisningsdatum = simpleDateFormat.parse(tillfallesPeriod.ForstaUndervisningsdatum)
+                    if(!start) {
+                        start = forstaUndervisningsdatum
+                    } else {
+                        if(forstaUndervisningsdatum.before(start)) {
+                            start = forstaUndervisningsdatum
                         }
                     }
-                } else {
-                    log.info "No Educations found for ${edu} and ${utbildningsTypKod}"
                 }
-            } else {
-                log.info "No L3UtbildningsTyp found for  ${edu} amd ${utbildningsTypKod}"
+                if(tillfallesPeriod.Omfattningsvarde) {
+                    credits += Double.parseDouble(tillfallesPeriod.Omfattningsvarde)
+                }
+                if(tillfallesPeriod.SistaUndervisningsdatum) {
+                    Date sistaDatum = simpleDateFormat.parse(tillfallesPeriod.SistaUndervisningsdatum)
+                    if(!end) {
+                        end = sistaDatum
+                    } else {
+                        if(sistaDatum.after(end)) {
+                            end = sistaDatum
+                        }
+                    }
+                }
+            }
+
+            String utbildningsinstansUID = educationEvent.UtbildningsinstansUID?.trim() as String
+            int utbildningstypID = educationEvent.UtbildningstypID ?: 0
+
+            L3UtbildningsTyp l3UtbildningsTyp = L3UtbildningsTyp.findByEduAndLadokId(edu, utbildningstypID)
+            L3Period startPeriod = L3Period.findByEduAndLadokId(edu, startPeriodId)
+            if(startPeriod && startPeriod.fromDatum>=dateLimit && l3UtbildningsTyp?.kod) {
+                L3UtbildningsTillfalle utbildningsTillfalle = null
+                if(L3KursPaketeringTillfalle.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+                    utbildningsTillfalle = L3KursPaketeringTillfalle.findOrCreateByEduAndStartPeriodIdAndTillfallesKod(edu, startPeriodId, tillfalleskod)
+                } else if(L3KursTillfalle.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+                    utbildningsTillfalle = L3KursTillfalle.findOrCreateByEduAndStartPeriodIdAndTillfallesKod(edu, startPeriodId, tillfalleskod)
+                } else if(L3ProgramInriktningTillfalle.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+                    utbildningsTillfalle = L3ProgramInriktningTillfalle.findOrCreateByEduAndStartPeriodIdAndTillfallesKod(edu, startPeriodId, tillfalleskod)
+                } else if(L3ProgramTillfalle.UTBILDNINGTYPER.contains(l3UtbildningsTyp.kod)) {
+                    utbildningsTillfalle = L3ProgramTillfalle.findOrCreateByEduAndStartPeriodIdAndTillfallesKod(edu, startPeriodId, tillfalleskod)
+                } else {
+                    utbildningsTillfalle = L3UtbildningsTillfalle.findOrCreateByEduAndStartPeriodIdAndTillfallesKod(edu, startPeriodId, tillfalleskod)
+                }
+                utbildningsTillfalle.finansieringsFormId = finansieringsFormId
+                utbildningsTillfalle.installt = installt
+                utbildningsTillfalle.omfattningsVarde = credits
+                utbildningsTillfalle.organisationsUid = organisationUID
+                utbildningsTillfalle.slutDatum = end
+                utbildningsTillfalle.startDatum = start
+                utbildningsTillfalle.status = status
+                utbildningsTillfalle.studieLokaliseringId = studielokaliseringID
+                utbildningsTillfalle.studieTaktId = studietaktID
+                utbildningsTillfalle.uid = uid
+                utbildningsTillfalle.undervisningsTidId = underVisningsTidId
+                utbildningsTillfalle.utbildningsInstansUid = utbildningsinstansUID
+                utbildningsTillfalle.utbildningsTypId = utbildningstypID
+                utbildningsTillfalle.save(failOnError: true)
+                utbildningsTillfalle = L3UtbildningsTillfalle.findOrCreateByEduAndStartPeriodIdAndTillfallesKod(edu, startPeriodId, tillfalleskod)
+                L3utbildningsTillfallePeriod.findAllByL3UtbildningsTillfalle(utbildningsTillfalle)*.delete(flush: true)
+                educationEvent.Tillfallesperioder.each { Map tillfallesPeriod ->
+                    Date forstaUndervisningsdatum = null
+                    if(tillfallesPeriod.ForstaUndervisningsdatum) {
+                        forstaUndervisningsdatum = simpleDateFormat.parse(tillfallesPeriod.ForstaUndervisningsdatum)
+                    }
+                    L3utbildningsTillfallePeriod l3utbildningsTillfallePeriod = L3utbildningsTillfallePeriod.findOrCreateByForstaUndervisningsDatumAndL3UtbildningsTillfalle(forstaUndervisningsdatum, utbildningsTillfalle)
+                    if(tillfallesPeriod.Omfattningsvarde) {
+                        l3utbildningsTillfallePeriod.omfattning = Double.parseDouble(tillfallesPeriod.Omfattningsvarde)
+                    }
+                    if(tillfallesPeriod.SistaUndervisningsdatum) {
+                        l3utbildningsTillfallePeriod.sistaUndervisningsDatum = simpleDateFormat.parse(tillfallesPeriod.SistaUndervisningsdatum)
+                    }
+                    l3utbildningsTillfallePeriod.save(failOnError: true)
+                }
             }
         }
     }
